@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: content_intel_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  fastapi:
+    build: .
+    container_name: content_intel_fastapi
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - MONGODB_DB_NAME=content_intelligence_db
+      - FASTAPI_HOST=0.0.0.0
+      - FASTAPI_PORT=8000
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  streamlit:
+    build: .
+    container_name: content_intel_streamlit
+    command: streamlit run frontend/streamlit_app.py --server.port=8501 --server.address=0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      - FASTAPI_BASE_URL=http://fastapi:8000
+    depends_on:
+      - fastapi
+
+volumes:
+  mongo_data:
