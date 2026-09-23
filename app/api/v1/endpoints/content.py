@@ -10,18 +10,18 @@ router = APIRouter()
 @router.post(
     "/content/generate",
     response_model=StandardAPIResponse[ContentGenerationResponse],
-    status_code=status.HTTP_202_ACCEPTED,
-    summary="[STUB] Trigger content generation workflow",
-    description="Phase 0 stub endpoint accepting content generation request and returning run_id."
+    status_code=status.HTTP_200_OK,
+    summary="Trigger Phase 1A AI Content Generation Workflow",
+    description="Triggers the Phase 1A agentic content generation pipeline (Supervisor -> Research -> Strategy -> Content Generator) and returns generated content."
 )
 async def generate_content(
     request: ContentGenerationRequest,
     content_service: ContentService = Depends(get_content_service)
 ) -> StandardAPIResponse[ContentGenerationResponse]:
-    stub_response = await content_service.create_generation_stub(request)
+    response_data = await content_service.generate_content(request)
     
     return StandardAPIResponse(
         status="success",
-        message="Content generation workflow queued (Phase 0 Stub)",
-        data=stub_response
+        message="Content generation workflow executed successfully",
+        data=response_data
     )

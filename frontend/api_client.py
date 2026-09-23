@@ -10,7 +10,7 @@ class APIClient:
         self.base_url = base_url or os.getenv("FASTAPI_BASE_URL", "http://127.0.0.1:8000")
         self.timeout = timeout
 
-    def check_health() -> Dict[str, Any]:
+    def check_health(self) -> Dict[str, Any]:
         """Fetch backend health status from /api/v1/health."""
         url = f"{self.base_url}/api/v1/health"
         try:

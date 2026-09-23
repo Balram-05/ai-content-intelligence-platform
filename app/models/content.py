@@ -1,11 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 
 class ContentGenerationRequest(BaseModel):
     """
     Schema for content generation requests (PRD Section 5.5).
-    Note: Phase 0 provides a stub endpoint only.
     """
     topic: str = Field(..., min_length=1, description="Target topic for content generation")
     campaign_id: Optional[str] = Field(default=None, description="Optional associated campaign ID")
@@ -20,10 +19,13 @@ class ContentGenerationRequest(BaseModel):
 
 class ContentGenerationResponse(BaseModel):
     """
-    Schema for content generation stub response (PRD Section 5.5).
+    Schema for content generation workflow response (PRD Section 5.5).
     """
     run_id: str = Field(..., description="Unique execution workflow identifier")
-    status: str = Field(default="queued", description="Workflow state: queued, running, completed, failed")
+    status: str = Field(default="completed", description="Workflow state: queued, running, completed, failed")
     message: str = Field(..., description="Status summary or warning")
     requested_topic: str = Field(..., description="Echo of input topic")
     platforms: List[str] = Field(..., description="Target platforms acknowledged")
+    generated_content: Optional[Dict[str, Any]] = Field(default=None, description="Generated content payload by platform")
+    research: Optional[Dict[str, Any]] = Field(default=None, description="Structured research output")
+    strategy: Optional[Dict[str, Any]] = Field(default=None, description="Structured strategy output")

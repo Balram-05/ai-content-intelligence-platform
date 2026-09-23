@@ -18,6 +18,9 @@ def get_health_service(
     return HealthService(db=db, settings=settings)
 
 
-def get_content_service() -> ContentService:
-    """FastAPI Dependency injecting ContentService stub."""
-    return ContentService()
+def get_content_service(
+    db: Database = Depends(get_db),
+    settings: Settings = Depends(get_settings)
+) -> ContentService:
+    """FastAPI Dependency injecting ContentService."""
+    return ContentService(db=db, settings=settings)

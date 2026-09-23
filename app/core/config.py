@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     MONGODB_MIN_CONNECTIONS: int = 1
     MONGODB_CONNECT_TIMEOUT_MS: int = 2000
 
+    # LLM / AI Configuration
+    LLM_PROVIDER: str = "openai"
+    OPENAI_API_KEY: str | None = None
+    OPENAI_MODEL: str = "gpt-4o-mini"
+
 
 @lru_cache
 def get_settings() -> Settings:
