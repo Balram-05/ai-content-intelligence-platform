@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str | None = None
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
+    # RAG / Vector DB Configuration
+    CHROMA_PERSIST_DIR: str = "./.chroma"
+    CHROMA_COLLECTION_NAME: str = "knowledge_base"
+    EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
+    RAG_CHUNK_SIZE: int = 1000
+    RAG_CHUNK_OVERLAP: int = 200
+
 @lru_cache
 def get_settings() -> Settings:
     """Returns a cached instance of the settings."""

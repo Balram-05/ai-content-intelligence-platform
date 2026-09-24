@@ -2,7 +2,66 @@
 
 An autonomous, multi-agent content intelligence system designed to automate the content lifecycle from topic/document research to multi-platform generation, fact-checking, editorial review, scheduling, and analytics.
 
-> **Phase 0 Status**: Foundational slice implementation. Contains FastAPI gateway, async MongoDB database driver connection layer, centralized Pydantic settings, Streamlit frontend dashboard, structured logging, consistent API envelope, and automated test suite.
+> **Phase 0 & 1A Status**: Completed foundational architecture, FastAPI backend, MongoDB persistence, Streamlit UI, and LangGraph multi-agent orchestration (Supervisor, Research, Strategy, Content Generator) with Groq / OpenAI LLM support.
+> **Phase 1B-1 Status**: RAG Knowledge Ingestion Foundation complete. Includes PDF document extraction, text chunking, Sentence Transformer embeddings, persistent local ChromaDB vector store, and document ingestion API.
+
+---
+
+## 📚 Phase 1B-1 RAG Knowledge Ingestion
+
+The RAG ingestion pipeline processes PDF documents into vector embeddings for knowledge retrieval:
+
+```
+PDF Document ──► PDF Loader ──► Text Chunker ──► Sentence Transformer ──► Local ChromaDB
+                 (pypdf)        (overlap)         (all-MiniLM-L6-v2)    (./.chroma)
+```
+
+### RAG Configuration Settings (`.env`)
+- `CHROMA_PERSIST_DIR`: Local path for ChromaDB storage (default: `./.chroma`).
+- `CHROMA_COLLECTION_NAME`: Target vector collection name (default: `knowledge_base`).
+- `EMBEDDING_MODEL_NAME`: Sentence Transformer model (default: `all-MiniLM-L6-v2`).
+- `RAG_CHUNK_SIZE`: Maximum characters per chunk (default: `1000`).
+- `RAG_CHUNK_OVERLAP`: Overlapping characters between consecutive chunks (default: `200`).
+
+### Ingestion API Endpoint
+Upload a PDF document to store embeddings in ChromaDB:
+- **URL**: `POST /api/v1/knowledge/ingest`
+- **Content-Type**: `multipart/form-data`
+- **Form Key**: `file` (PDF file)
+
+#### Example Request (`cURL`):
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/knowledge/ingest" \
+     -H "accept: application/json" \
+     -H "Content-Type: multipart/form-data" \
+     -F "file=@sample_document.pdf;type=application/pdf"
+```
+
+#### Example Response:
+```json
+{
+  "status": "success",
+  "message": "PDF document 'sample_document.pdf' successfully ingested and indexed.",
+  "data": {
+    "document_id": "9f15b8b248c53a935885a6dfe8c8292c4c740c7cb70b413f6919651fe970d4af",
+    "source": "sample_document.pdf",
+    "total_pages": 4,
+    "total_chunks": 12,
+    "collection_name": "knowledge_base",
+    "status": "success",
+    "message": "Successfully ingested 'sample_document.pdf' into knowledge base.",
+    "metadata": {
+      "source": "sample_document.pdf",
+      "total_pages": 4,
+      "non_empty_pages": 4,
+      "total_chunks": 12,
+      "embedding_model": "all-MiniLM-L6-v2"
+    }
+  },
+  "error": null,
+  "timestamp": "2026-09-24T12:00:00Z"
+}
+```
 
 ---
 

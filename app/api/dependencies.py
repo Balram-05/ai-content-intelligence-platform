@@ -3,6 +3,7 @@ from app.core.config import Settings, get_settings
 from app.core.database import Database, db_instance
 from app.services.health_service import HealthService
 from app.services.content_service import ContentService
+from app.rag.ingestion import RAGIngestionService
 
 
 def get_db() -> Database:
@@ -24,3 +25,9 @@ def get_content_service(
 ) -> ContentService:
     """FastAPI Dependency injecting ContentService."""
     return ContentService(db=db, settings=settings)
+
+
+def get_rag_ingestion_service() -> RAGIngestionService:
+    """FastAPI Dependency injecting RAGIngestionService."""
+    return RAGIngestionService()
+
