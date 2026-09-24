@@ -28,13 +28,16 @@ class Settings(BaseSettings):
     MONGODB_DB_NAME: str = "content_intelligence_db"
     MONGODB_MAX_CONNECTIONS: int = 10
     MONGODB_MIN_CONNECTIONS: int = 1
-    MONGODB_CONNECT_TIMEOUT_MS: int = 2000
+    MONGODB_CONNECT_TIMEOUT_MS: int = 5000
 
     # LLM / AI Configuration
-    LLM_PROVIDER: str = "openai"
+    LLM_PROVIDER: str = "groq"
+
     OPENAI_API_KEY: str | None = None
     OPENAI_MODEL: str = "gpt-4o-mini"
 
+    GROQ_API_KEY: str | None = None
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
 @lru_cache
 def get_settings() -> Settings:

@@ -1,3 +1,4 @@
+import certifi
 from typing import Optional, Dict, Any
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
@@ -18,11 +19,17 @@ class Database:
         """Initialize MongoDB connection pool."""
         logger.info(f"Connecting to MongoDB at {self.settings.MONGODB_URL}...")
         try:
+            client_kwargs = {
+                "maxPoolSize": self.settings.MONGODB_MAX_CONNECTIONS,
+                "minPoolSize": self.settings.MONGODB_MIN_CONNECTIONS,
+                "serverSelectionTimeoutMS": self.settings.MONGODB_CONNECT_TIMEOUT_MS,
+            }
+            if "mongodb+srv://" in self.settings.MONGODB_URL or "tls=true" in self.settings.MONGODB_URL.lower():
+                client_kwargs["tlsCAFile"] = certifi.where()
+
             self.client = AsyncIOMotorClient(
                 self.settings.MONGODB_URL,
-                maxPoolSize=self.settings.MONGODB_MAX_CONNECTIONS,
-                minPoolSize=self.settings.MONGODB_MIN_CONNECTIONS,
-                serverSelectionTimeoutMS=self.settings.MONGODB_CONNECT_TIMEOUT_MS
+                **client_kwargs
             )
             self.db = self.client[self.settings.MONGODB_DB_NAME]
             # Perform lightweight ping on startup
