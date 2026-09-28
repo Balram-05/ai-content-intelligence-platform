@@ -5,12 +5,14 @@ from app.core.logging import logger
 
 async def supervisor_node(state: ContentState) -> Dict[str, Any]:
     """
-    Phase 1A Supervisor Node.
+    Phase 1B-3 Supervisor Node.
     Determines next stage in the deterministic pipeline:
-    Supervisor -> Research -> Strategy -> Content Generator -> END.
+    Supervisor -> Research -> RAG Retrieval -> Strategy -> Content Generator -> END.
     """
     if not state.get("research"):
         next_step = "research"
+    elif not state.get("retrieval_completed"):
+        next_step = "rag_retrieval"
     elif not state.get("strategy"):
         next_step = "strategy"
     elif not state.get("generated_content"):

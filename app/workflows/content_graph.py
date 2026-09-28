@@ -3,6 +3,7 @@ from langgraph.graph import StateGraph, START, END
 from app.workflows.state import ContentState
 from app.agents.supervisor import supervisor_node, supervisor_router
 from app.agents.research_agent import research_agent_node
+from app.agents.rag_retrieval import rag_retrieval_node
 from app.agents.strategy_agent import strategy_agent_node
 from app.agents.content_generator import content_generator_node
 from app.core.logging import logger
@@ -10,14 +11,15 @@ from app.core.logging import logger
 
 def build_content_workflow():
     """
-    Constructs and compiles the Phase 1A LangGraph workflow graph:
-    START -> Supervisor -> Research -> Strategy -> Content Generator -> END.
+    Constructs and compiles the Phase 1B-3 LangGraph workflow graph:
+    START -> Supervisor -> Research -> RAG Retrieval -> Strategy -> Content Generator -> END.
     """
     builder = StateGraph(ContentState)
 
     # Register workflow nodes
     builder.add_node("supervisor", supervisor_node)
     builder.add_node("research", research_agent_node)
+    builder.add_node("rag_retrieval", rag_retrieval_node)
     builder.add_node("strategy", strategy_agent_node)
     builder.add_node("content_generator", content_generator_node)
 
@@ -30,6 +32,7 @@ def build_content_workflow():
         supervisor_router,
         {
             "research": "research",
+            "rag_retrieval": "rag_retrieval",
             "strategy": "strategy",
             "content_generator": "content_generator",
             "finish": END
@@ -38,6 +41,7 @@ def build_content_workflow():
 
     # Each agent returns to supervisor for state verification and routing
     builder.add_edge("research", "supervisor")
+    builder.add_edge("rag_retrieval", "supervisor")
     builder.add_edge("strategy", "supervisor")
     builder.add_edge("content_generator", "supervisor")
 

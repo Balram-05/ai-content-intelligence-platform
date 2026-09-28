@@ -21,11 +21,15 @@ async def strategy_agent_node(state: ContentState) -> Dict[str, Any]:
     audience = state.get("audience", "general audience")
     tone = state.get("tone", "educational")
     research = state.get("research", {})
+    retrieved_context = state.get("retrieved_context", [])
 
     system_prompt = (
         "You are a Content Strategy Agent specializing in personal branding and content planning. "
-        "Your task is to take topic information, target platforms, audience profile, tone, and research synthesis, "
+        "Your task is to take topic information, target platforms, audience profile, tone, research synthesis, "
+        "and retrieved knowledge base context (if available), "
         "and produce a structured content strategy in JSON format.\n"
+        "Treat retrieved knowledge base context as supporting source material from the user's knowledge base, "
+        "and use it when relevant to formulate the strategy.\n"
         "Required JSON keys:\n"
         "- 'angle': core narrative angle/hook strategy\n"
         "- 'target_platform_positioning': strategy per platform\n"
@@ -41,6 +45,7 @@ async def strategy_agent_node(state: ContentState) -> Dict[str, Any]:
         f"- Audience: {audience}\n"
         f"- Desired Tone: {tone}\n"
         f"- Research Context: {json.dumps(research)}\n"
+        f"- Retrieved Knowledge Base Context: {json.dumps(retrieved_context)}\n"
     )
 
     try:

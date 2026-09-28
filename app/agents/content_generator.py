@@ -21,10 +21,12 @@ async def content_generator_node(state: ContentState) -> Dict[str, Any]:
     tone = state.get("tone", "educational")
     research = state.get("research", {})
     strategy = state.get("strategy", {})
+    retrieved_context = state.get("retrieved_context", [])
 
     system_prompt = (
         "You are an AI Content Generator Agent specialized in personal branding posts.\n"
         "Your goal is to generate high-performing, high-engagement content for target platforms (primarily LinkedIn).\n"
+        "Use retrieved knowledge base context when relevant as supporting internal source material, avoid contradicting it unnecessarily, and combine it with the strategy and research.\n"
         "Produce JSON mapping each requested platform key to its generated content object.\n"
         "Required format per platform key (e.g. 'linkedin'):\n"
         "{\n"
@@ -42,8 +44,9 @@ async def content_generator_node(state: ContentState) -> Dict[str, Any]:
         f"- Target Platforms: {', '.join(platforms)}\n"
         f"- Audience: {audience}\n"
         f"- Tone: {tone}\n"
-        f"- Research: {json.dumps(research)}\n"
+        f"- Research Context: {json.dumps(research)}\n"
         f"- Strategy: {json.dumps(strategy)}\n"
+        f"- Retrieved Knowledge Base Context: {json.dumps(retrieved_context)}\n"
     )
 
     try:
