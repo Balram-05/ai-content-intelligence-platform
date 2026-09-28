@@ -1,0 +1,85 @@
+.
+├── .env
+├── .env.example
+├── .gitignore
+├── ARCHITECTURE.md
+├── Dockerfile
+├── README.md
+├── app
+│   ├── __init__.py
+│   ├── agents
+│   │   ├── __init__.py
+│   │   ├── content_generator.py
+│   │   ├── research_agent.py
+│   │   ├── strategy_agent.py
+│   │   └── supervisor.py
+│   ├── api
+│   │   ├── __init__.py
+│   │   ├── dependencies.py
+│   │   └── v1
+│   │       ├── __init__.py
+│   │       ├── endpoints
+│   │       │   ├── __init__.py
+│   │       │   ├── content.py
+│   │       │   ├── health.py
+│   │       │   └── knowledge.py
+│   │       └── router.py
+│   ├── core
+│   │   ├── __init__.py
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── llm.py
+│   │   └── logging.py
+│   ├── main.py
+│   ├── mcp
+│   │   └── __init__.py
+│   ├── models
+│   │   ├── __init__.py
+│   │   ├── common.py
+│   │   ├── content.py
+│   │   └── rag.py
+│   ├── rag
+│   │   ├── __init__.py
+│   │   ├── chunker.py
+│   │   ├── embeddings.py
+│   │   ├── ingestion.py
+│   │   ├── loader.py
+│   │   ├── retrieval.py
+│   │   └── vector_store.py
+│   ├── services
+│   │   ├── __init__.py
+│   │   ├── content_service.py
+│   │   └── health_service.py
+│   ├── workers
+│   │   └── __init__.py
+│   └── workflows
+│       ├── __init__.py
+│       ├── content_graph.py
+│       └── state.py
+├── docker-compose.yml
+├── frontend
+│   ├── api_client.py
+│   └── streamlit_app.py
+├── project_structure.txt
+├── requirements.txt
+├── scratch
+│   ├── test_ingestion.py
+│   └── test_retrieval.py
+└── tests
+    ├── __init__.py
+    ├── api
+    │   ├── __init__.py
+    │   ├── test_content_stub.py
+    │   ├── test_health.py
+    │   └── test_knowledge.py
+    ├── conftest.py
+    └── unit
+        ├── __init__.py
+        ├── test_config.py
+        ├── test_rag_chunker.py
+        ├── test_rag_embeddings.py
+        ├── test_rag_ingestion.py
+        ├── test_rag_loader.py
+        ├── test_rag_retrieval.py
+        ├── test_rag_vector_store.py
+        └── test_workflow.py

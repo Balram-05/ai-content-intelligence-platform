@@ -74,3 +74,57 @@ def test_knowledge_ingest_endpoint_ingestion_failure():
         assert "Corrupted PDF stream" in response.json()["detail"]
     finally:
         app.dependency_overrides.clear()
+
+
+def test_knowledge_search_endpoint_success():
+    from app.api.dependencies import get_rag_retrieval_service
+    from app.rag.retrieval import RAGRetrievalService, RetrievalResultPayload, RetrievedChunkResult
+
+    mock_retrieval_service = MagicMock(spec=RAGRetrievalService)
+    mock_retrieval_service.search.return_value = RetrievalResultPayload(
+        query="LangGraph supervisor routing",
+        total_results=1,
+        results=[
+            RetrievedChunkResult(
+                chunk_id="chunk_101",
+                text="Supervisor node performs conditional routing in LangGraph.",
+                metadata={"document_id": "doc123", "page_number": 3, "chunk_index": 0},
+                distance=0.12
+            )
+        ]
+    )
+
+    app.dependency_overrides[get_rag_retrieval_service] = lambda: mock_retrieval_service
+
+    try:
+        response = client.post(
+            "/api/v1/knowledge/search",
+            json={"query": "LangGraph supervisor routing", "top_k": 3}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["query"] == "LangGraph supervisor routing"
+        assert data["data"]["total_results"] == 1
+        assert data["data"]["results"][0]["chunk_id"] == "chunk_101"
+        assert data["data"]["results"][0]["distance"] == 0.12
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_knowledge_search_endpoint_validation_errors():
+    # Empty query string
+    response1 = client.post(
+        "/api/v1/knowledge/search",
+        json={"query": "", "top_k": 5}
+    )
+    assert response1.status_code == 422
+
+    # Invalid top_k (0 or > 50)
+    response2 = client.post(
+        "/api/v1/knowledge/search",
+        json={"query": "valid query", "top_k": 0}
+    )
+    assert response2.status_code == 422
+

@@ -4,16 +4,20 @@ An autonomous, multi-agent content intelligence system designed to automate the 
 
 > **Phase 0 & 1A Status**: Completed foundational architecture, FastAPI backend, MongoDB persistence, Streamlit UI, and LangGraph multi-agent orchestration (Supervisor, Research, Strategy, Content Generator) with Groq / OpenAI LLM support.
 > **Phase 1B-1 Status**: RAG Knowledge Ingestion Foundation complete. Includes PDF document extraction, text chunking, Sentence Transformer embeddings, persistent local ChromaDB vector store, and document ingestion API.
+> **Phase 1B-2 Status**: RAG Knowledge Retrieval complete. Includes query embedding, vector similarity search against ChromaDB, metadata preservation, raw distance scoring, and knowledge search API.
 
 ---
 
-## 📚 Phase 1B-1 RAG Knowledge Ingestion
+## 📚 RAG Knowledge Subsystem
 
-The RAG ingestion pipeline processes PDF documents into vector embeddings for knowledge retrieval:
+The RAG subsystem handles PDF document ingestion and semantic vector retrieval:
 
 ```
-PDF Document ──► PDF Loader ──► Text Chunker ──► Sentence Transformer ──► Local ChromaDB
-                 (pypdf)        (overlap)         (all-MiniLM-L6-v2)    (./.chroma)
+Ingestion: PDF Document ──► PDF Loader ──► Text Chunker ──► Sentence Transformer ──► Local ChromaDB
+                            (pypdf)        (overlap)         (all-MiniLM-L6-v2)    (./.chroma)
+
+Retrieval: User Query ──► Query Embedding ──► Similarity Search ──► Top-K Relevant Chunks
+                          (all-MiniLM-L6-v2)  (ChromaDB)           (Text + Metadata + Distance)
 ```
 
 ### RAG Configuration Settings (`.env`)
@@ -29,7 +33,7 @@ Upload a PDF document to store embeddings in ChromaDB:
 - **Content-Type**: `multipart/form-data`
 - **Form Key**: `file` (PDF file)
 
-#### Example Request (`cURL`):
+#### Example Ingestion Request (`cURL`):
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/v1/knowledge/ingest" \
      -H "accept: application/json" \
@@ -37,29 +41,42 @@ curl -X POST "http://127.0.0.1:8000/api/v1/knowledge/ingest" \
      -F "file=@sample_document.pdf;type=application/pdf"
 ```
 
-#### Example Response:
+### Retrieval API Endpoint
+Perform semantic vector similarity search against indexed knowledge chunks:
+- **URL**: `POST /api/v1/knowledge/search`
+- **Content-Type**: `application/json`
+
+#### Example Retrieval Request (`cURL`):
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/knowledge/search" \
+     -H "Content-Type: application/json" \
+     -d '{"query": "How does LangGraph use a supervisor?", "top_k": 3}'
+```
+
+#### Example Retrieval Response:
 ```json
 {
   "status": "success",
-  "message": "PDF document 'sample_document.pdf' successfully ingested and indexed.",
+  "message": "Retrieved 1 matching chunks for query 'How does LangGraph use a supervisor?'.",
   "data": {
-    "document_id": "9f15b8b248c53a935885a6dfe8c8292c4c740c7cb70b413f6919651fe970d4af",
-    "source": "sample_document.pdf",
-    "total_pages": 4,
-    "total_chunks": 12,
-    "collection_name": "knowledge_base",
-    "status": "success",
-    "message": "Successfully ingested 'sample_document.pdf' into knowledge base.",
-    "metadata": {
-      "source": "sample_document.pdf",
-      "total_pages": 4,
-      "non_empty_pages": 4,
-      "total_chunks": 12,
-      "embedding_model": "all-MiniLM-L6-v2"
-    }
+    "query": "How does LangGraph use a supervisor?",
+    "total_results": 1,
+    "results": [
+      {
+        "chunk_id": "doc123_page1_chunk0",
+        "text": "LangGraph uses a supervisor node to manage conditional routing between agents.",
+        "metadata": {
+          "document_id": "doc123",
+          "source": "architecture.pdf",
+          "page_number": 1,
+          "chunk_index": 0
+        },
+        "distance": 0.122
+      }
+    ]
   },
   "error": null,
-  "timestamp": "2026-09-24T12:00:00Z"
+  "timestamp": "2026-09-24T19:00:00Z"
 }
 ```
 

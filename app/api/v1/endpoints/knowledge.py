@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from app.models.common import StandardAPIResponse
-from app.models.rag import KnowledgeIngestionResponse
+from app.models.rag import KnowledgeIngestionResponse, KnowledgeSearchRequest, KnowledgeSearchResponse, RetrievedChunk
 from app.rag.ingestion import RAGIngestionService, RAGIngestionError
-from app.api.dependencies import get_rag_ingestion_service
+from app.rag.retrieval import RAGRetrievalService, RAGRetrievalError
+from app.api.dependencies import get_rag_ingestion_service, get_rag_retrieval_service
 from app.core.logging import logger
 
 router = APIRouter()
@@ -73,3 +74,60 @@ async def ingest_knowledge_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Unexpected internal server error during document ingestion: {e}"
         )
+
+
+@router.post(
+    "/knowledge/search",
+    response_model=StandardAPIResponse[KnowledgeSearchResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Search RAG Knowledge Base using vector similarity",
+    description="Accepts a natural language query, generates a query vector embedding using SentenceTransformers, and performs vector similarity search against ChromaDB."
+)
+async def search_knowledge_base(
+    request: KnowledgeSearchRequest,
+    retrieval_service: RAGRetrievalService = Depends(get_rag_retrieval_service)
+) -> StandardAPIResponse[KnowledgeSearchResponse]:
+    """
+    Endpoint for semantic vector similarity search against indexed knowledge chunks.
+    """
+    logger.info(f"[API Knowledge] Received search request for query: '{request.query}' (top_k={request.top_k})")
+    try:
+        top_k_val = request.top_k or 4
+        result = retrieval_service.search(query=request.query, top_k=top_k_val)
+
+        retrieved_chunks = [
+            RetrievedChunk(
+                chunk_id=chunk.chunk_id,
+                text=chunk.text,
+                metadata=chunk.metadata,
+                distance=chunk.distance
+            )
+            for chunk in result.results
+        ]
+
+        response_payload = KnowledgeSearchResponse(
+            query=result.query,
+            total_results=result.total_results,
+            results=retrieved_chunks
+        )
+
+        return StandardAPIResponse(
+            status="success",
+            message=f"Retrieved {result.total_results} matching chunks for query '{result.query}'.",
+            data=response_payload
+        )
+    except HTTPException:
+        raise
+    except RAGRetrievalError as e:
+        logger.error(f"[API Knowledge] Knowledge search failed for query '{request.query}': {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"[API Knowledge] Unexpected error during knowledge search: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unexpected internal server error during knowledge retrieval: {e}"
+        )
+

@@ -4,6 +4,7 @@ from app.core.database import Database, db_instance
 from app.services.health_service import HealthService
 from app.services.content_service import ContentService
 from app.rag.ingestion import RAGIngestionService
+from app.rag.retrieval import RAGRetrievalService
 
 
 def get_db() -> Database:
@@ -30,4 +31,10 @@ def get_content_service(
 def get_rag_ingestion_service() -> RAGIngestionService:
     """FastAPI Dependency injecting RAGIngestionService."""
     return RAGIngestionService()
+
+
+def get_rag_retrieval_service() -> RAGRetrievalService:
+    """FastAPI Dependency injecting RAGRetrievalService."""
+    return RAGRetrievalService()
+
 

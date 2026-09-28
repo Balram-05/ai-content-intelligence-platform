@@ -90,3 +90,41 @@ class APIClient:
                 "success": False,
                 "error": str(e)
             }
+
+    def search_knowledge_base(
+        self,
+        query: str,
+        top_k: int = 4
+    ) -> Dict[str, Any]:
+        """Trigger POST /api/v1/knowledge/search endpoint."""
+        url = f"{self.base_url}/api/v1/knowledge/search"
+        payload = {
+            "query": query,
+            "top_k": top_k
+        }
+        try:
+            with httpx.Client(timeout=self.timeout) as client:
+                response = client.post(url, json=payload)
+                try:
+                    data = response.json()
+                except Exception:
+                    data = {"raw_text": response.text}
+
+                return {
+                    "http_status": response.status_code,
+                    "success": response.is_success,
+                    "data": data
+                }
+        except httpx.ConnectError:
+            return {
+                "http_status": 503,
+                "success": False,
+                "error": f"Unable to connect to FastAPI backend at {self.base_url}."
+            }
+        except Exception as e:
+            return {
+                "http_status": 500,
+                "success": False,
+                "error": str(e)
+            }
+
