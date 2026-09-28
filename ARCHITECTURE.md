@@ -229,8 +229,9 @@ class RAGIngestionService:
 ### Retrieval Service (`app/rag/retrieval.py`)
 ```python
 class RAGRetrievalService:
-    def search(self, query: str, top_k: int = 4, where_filter: Optional[Dict[str, Any]] = None) -> RetrievalResultPayload
+    def search(self, query: str, top_k: int = 4, where_filter: Optional[Dict[str, Any]] = None, distance_threshold: Optional[float] = None) -> RetrievalResultPayload
 ```
+*Applies configurable cosine distance threshold filtering (`RAG_DISTANCE_THRESHOLD`, default `0.6`) to discard irrelevant nearest-neighbor matches.*
 
 ---
 

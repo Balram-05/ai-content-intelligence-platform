@@ -26,7 +26,7 @@ def test_retrieval_success():
         }
     ]
 
-    service = RAGRetrievalService(embedder=mock_embedder, vector_store=mock_vector_store)
+    service = RAGRetrievalService(embedder=mock_embedder, vector_store=mock_vector_store, distance_threshold=0.6)
     result = service.search(query="How does LangGraph use a supervisor?", top_k=2)
 
     assert isinstance(result, RetrievalResultPayload)
@@ -42,6 +42,94 @@ def test_retrieval_success():
         top_k=2,
         where_filter=None
     )
+
+
+def test_retrieval_distance_threshold_filtering_mixed():
+    mock_embedder = MagicMock(spec=SentenceTransformerEmbeddings)
+    mock_embedder.embed_query.return_value = [0.1] * 384
+
+    mock_vector_store = MagicMock(spec=ChromaVectorStore)
+    mock_vector_store.collection_name = "test_collection"
+    mock_vector_store.query_similar.return_value = [
+        {
+            "chunk_id": "chunk_relevant_1",
+            "text": "Highly relevant context snippet",
+            "metadata": {"source": "doc1.pdf"},
+            "distance": 0.15
+        },
+        {
+            "chunk_id": "chunk_relevant_2",
+            "text": "Moderately relevant context snippet",
+            "metadata": {"source": "doc1.pdf"},
+            "distance": 0.55
+        },
+        {
+            "chunk_id": "chunk_irrelevant_1",
+            "text": "Ancient Roman Architecture details",
+            "metadata": {"source": "doc2.pdf"},
+            "distance": 0.78
+        },
+        {
+            "chunk_id": "chunk_irrelevant_2",
+            "text": "Random history facts",
+            "metadata": {"source": "doc3.pdf"},
+            "distance": 0.92
+        }
+    ]
+
+    service = RAGRetrievalService(embedder=mock_embedder, vector_store=mock_vector_store, distance_threshold=0.6)
+    result = service.search(query="Relevant query topic", top_k=4)
+
+    assert result.total_results == 2
+    assert len(result.results) == 2
+    assert result.results[0].chunk_id == "chunk_relevant_1"
+    assert result.results[1].chunk_id == "chunk_relevant_2"
+
+
+def test_retrieval_all_candidates_above_threshold():
+    mock_embedder = MagicMock(spec=SentenceTransformerEmbeddings)
+    mock_embedder.embed_query.return_value = [0.1] * 384
+
+    mock_vector_store = MagicMock(spec=ChromaVectorStore)
+    mock_vector_store.collection_name = "test_collection"
+    mock_vector_store.query_similar.return_value = [
+        {
+            "chunk_id": "chunk_1",
+            "text": "Unrelated topic text",
+            "metadata": {},
+            "distance": 0.85
+        },
+        {
+            "chunk_id": "chunk_2",
+            "text": "Another unrelated text",
+            "metadata": {},
+            "distance": 0.95
+        }
+    ]
+
+    service = RAGRetrievalService(embedder=mock_embedder, vector_store=mock_vector_store, distance_threshold=0.6)
+    result = service.search(query="History of ancient Roman architecture", top_k=4)
+
+    assert result.total_results == 0
+    assert result.results == []
+
+
+def test_retrieval_custom_distance_threshold_override():
+    mock_embedder = MagicMock(spec=SentenceTransformerEmbeddings)
+    mock_embedder.embed_query.return_value = [0.1] * 384
+
+    mock_vector_store = MagicMock(spec=ChromaVectorStore)
+    mock_vector_store.collection_name = "test_collection"
+    mock_vector_store.query_similar.return_value = [
+        {"chunk_id": "c1", "text": "text1", "metadata": {}, "distance": 0.20},
+        {"chunk_id": "c2", "text": "text2", "metadata": {}, "distance": 0.40},
+    ]
+
+    service = RAGRetrievalService(embedder=mock_embedder, vector_store=mock_vector_store, distance_threshold=0.6)
+    result = service.search(query="query", top_k=2, distance_threshold=0.3)
+
+    assert result.total_results == 1
+    assert result.results[0].chunk_id == "c1"
 
 
 def test_retrieval_empty_query():

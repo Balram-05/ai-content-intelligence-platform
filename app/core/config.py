@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
     RAG_CHUNK_SIZE: int = 1000
     RAG_CHUNK_OVERLAP: int = 200
+    RAG_DISTANCE_THRESHOLD: float = 0.6
 
 @lru_cache
 def get_settings() -> Settings:
