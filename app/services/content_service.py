@@ -42,6 +42,7 @@ class ContentService:
             "source_url": request.source_url,
             "campaign_id": request.campaign_id,
             "research": None,
+            "research_sources": None,
             "strategy": None,
             "generated_content": None,
             "next_step": None,
@@ -69,6 +70,7 @@ class ContentService:
             "campaign_id": request.campaign_id,
             "status": status,
             "research": final_state.get("research"),
+            "research_sources": final_state.get("research_sources"),
             "strategy": final_state.get("strategy"),
             "generated_content": final_state.get("generated_content"),
             "created_at": datetime.now(timezone.utc)
@@ -92,5 +94,6 @@ class ContentService:
             platforms=request.platforms,
             generated_content=final_state.get("generated_content"),
             research=final_state.get("research"),
+            research_sources=final_state.get("research_sources"),
             strategy=final_state.get("strategy")
         )

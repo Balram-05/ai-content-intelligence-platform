@@ -12,6 +12,7 @@ class ContentState(TypedDict, total=False):
     source_url: Optional[str]
     campaign_id: Optional[str]
     research: Optional[Dict[str, Any]]
+    research_sources: Optional[List[Dict[str, Any]]]
     retrieved_context: Optional[List[str]]
     retrieval_metadata: Optional[List[Dict[str, Any]]]
     retrieval_completed: Optional[bool]

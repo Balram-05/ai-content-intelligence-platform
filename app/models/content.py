@@ -28,4 +28,5 @@ class ContentGenerationResponse(BaseModel):
     platforms: List[str] = Field(..., description="Target platforms acknowledged")
     generated_content: Optional[Dict[str, Any]] = Field(default=None, description="Generated content payload by platform")
     research: Optional[Dict[str, Any]] = Field(default=None, description="Structured research output")
+    research_sources: Optional[List[Dict[str, Any]]] = Field(default=None, description="External search sources metadata from Search MCP")
     strategy: Optional[Dict[str, Any]] = Field(default=None, description="Structured strategy output")

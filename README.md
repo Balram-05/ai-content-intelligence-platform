@@ -194,9 +194,30 @@ pytest -v
 
 ---
 
-## 🐳 Docker Deployment (Optional / Secondary)
+## 🔍 Search MCP (Phase 1C-1)
 
-Orchestrate MongoDB, FastAPI, and Streamlit containers simultaneously using Docker Compose:
+The platform includes a unified **Search MCP** foundation establishing real-time external search capability:
+
+### Key Features
+- **Unified Search MCP Server**: Single MCP server exposing tools for `web`, `news`, `trends`, and `papers`.
+- **Domain Layer Isolation**: Clean separation between MCP tools (`app/mcp`), Search Service (`app/search/service.py`), and External Providers (`app/search/providers/`).
+- **Normalized Models**: Consistent `SearchResponse` and `SearchResult` schemas across all 4 search types.
+- **Provider Fallbacks**: Robust handling for API credentials and unauthenticated public APIs (ArXiv, Google News RSS, GitHub Trends).
+
+### Manual Verification
+Run the Search MCP standalone verification script:
+
+```bash
+python scripts/verify_search_mcp.py
+```
+
+### Running Search MCP Server Standalone
+
+```bash
+python -m app.mcp.server
+```
+Starts the Search MCP Server on `http://127.0.0.1:8001` via Streamable HTTP transport.
+
 
 ```bash
 docker-compose up --build

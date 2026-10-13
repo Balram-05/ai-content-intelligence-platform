@@ -47,7 +47,27 @@ class Settings(BaseSettings):
     RAG_CHUNK_OVERLAP: int = 200
     RAG_DISTANCE_THRESHOLD: float = 0.6
 
+    # Search & MCP Configuration
+    SEARCH_TIMEOUT_SECONDS: float = 10.0
+    SEARCH_DEFAULT_LIMIT: int = 5
+    SEARCH_MAX_LIMIT: int = 20
+
+    SEARCH_WEB_PROVIDER: str = "tavily"
+    SEARCH_NEWS_PROVIDER: str = "newsapi"
+    SEARCH_TRENDS_PROVIDER: str = "google_trends"
+    SEARCH_PAPERS_PROVIDER: str = "semantic_scholar"
+
+    TAVILY_API_KEY: str | None = None
+    NEWS_API_KEY: str | None = None
+    SERPER_API_KEY: str | None = None
+    SEMANTIC_SCHOLAR_API_KEY: str | None = None
+
+    MCP_SERVER_HOST: str = "127.0.0.1"
+    MCP_SERVER_PORT: int = 8001
+    MCP_SERVER_NAME: str = "search-mcp-server"
+
 @lru_cache
 def get_settings() -> Settings:
     """Returns a cached instance of the settings."""
     return Settings()
+

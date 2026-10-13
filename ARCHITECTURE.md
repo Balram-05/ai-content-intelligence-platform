@@ -265,3 +265,32 @@ class APIClient:
     def search_knowledge_base(self, query: str, top_k: int = 4) -> Dict[str, Any]
 ```
 
+---
+
+## 8. Search MCP Architecture (Phase 1C-1)
+
+### Architecture Separation Principle
+```text
+MCP Layer (app/mcp)
+    ↓
+Search Domain Layer (app/search/service.py)
+    ↓
+Provider Abstraction Layer (app/search/providers/)
+    ↓
+External Search APIs (Tavily, Serper, NewsAPI, Google News, Google/GitHub Trends, Semantic Scholar, ArXiv)
+```
+
+### RAG vs Search MCP Distinction
+- **RAG (`app/rag`)**: Internal/user-provided knowledge (uploaded PDFs, company documentation, ChromaDB vector search).
+- **Search MCP (`app/mcp` & `app/search`)**: External/current real-time information (web search, recent news, trending topics, academic research papers).
+
+### Core Components
+1. **Search Domain Models (`app/search/models.py`)**: `SearchType`, `SearchResult`, `SearchResponse`.
+2. **Search Exceptions (`app/search/exceptions.py`)**: `SearchError`, `InvalidSearchRequestError`, `SearchProviderConfigError`, `SearchProviderAPIError`, `SearchProviderNotFoundError`.
+3. **Search Providers (`app/search/providers/`)**: `WebSearchProvider`, `NewsSearchProvider`, `TrendsSearchProvider`, `PapersSearchProvider`.
+4. **Search Service (`app/search/service.py`)**: `SearchService` (domain coordinator).
+5. **MCP Tools (`app/mcp/tools/search_tools.py`)**: Thin MCP tools (`search_web`, `search_news`, `search_trends`, `search_research_papers`).
+6. **MCP Server (`app/mcp/server.py`)**: Unified `MCPServer` exposing all search capabilities via Streamable HTTP ASGI transport.
+7. **MCP Client (`app/mcp/client.py`)**: `SearchMCPClient` for streamable HTTP or in-process tool calls.
+
+
