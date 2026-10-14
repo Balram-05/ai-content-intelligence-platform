@@ -1,7 +1,8 @@
+import re
 import secrets
 import urllib.parse
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 
 import httpx
 from fastapi import HTTPException, status
@@ -219,6 +220,10 @@ class LinkedInService:
         member_urn = account["member_urn"]
 
         # 3. Construct official LinkedIn Posts API request
+        # Format commentary to comply with LinkedIn Little Text Format specification
+        # and prevent silent post truncation on LinkedIn's Posts API
+        formatted_commentary, truncation_warning = self._format_linkedin_commentary(request.text)
+
         posts_url = "https://api.linkedin.com/rest/posts"
         headers = {
             "Authorization": f"Bearer {access_token}",
@@ -228,7 +233,7 @@ class LinkedInService:
         }
         payload = {
             "author": member_urn,
-            "commentary": request.text,
+            "commentary": formatted_commentary,
             "visibility": "PUBLIC",
             "distribution": {
                 "feedDistribution": "MAIN_FEED",
@@ -314,7 +319,7 @@ class LinkedInService:
             "published_at": datetime.now(timezone.utc),
         }
 
-        warning_msg = None
+        warning_msg = truncation_warning
         try:
             if self.db and self.db.db is not None:
                 await self.db.db["published_posts"].insert_one(published_record)
@@ -324,10 +329,11 @@ class LinkedInService:
                 logger.info("[LINKEDIN_SERVICE] MongoDB not connected; stored post in-memory.")
         except Exception as db_err:
             logger.error(f"[LINKEDIN_SERVICE] Failed to persist published post to MongoDB: {db_err}")
-            warning_msg = (
+            db_warning = (
                 "Post was successfully published to LinkedIn, but saving the publication record to MongoDB failed. "
                 "DO NOT blindly retry this action to avoid creating duplicate posts on your profile."
             )
+            warning_msg = f"{warning_msg} {db_warning}".strip() if warning_msg else db_warning
 
         return LinkedInPublishResponse(
             post_urn=post_urn,
@@ -413,9 +419,16 @@ class LinkedInService:
         if len(post_text) > 3000:
             logger.warning(
                 f"[LINKEDIN_SERVICE] Generated post length ({len(post_text)}) exceeds 3000 chars. "
-                "Truncating cleanly to 3000 characters."
+                "Truncating cleanly to 3000 characters while preserving full post structure."
             )
-            post_text = post_text[:2997].rstrip() + "..."
+            cutoff = 2997
+            last_space = post_text.rfind(" ", 0, cutoff)
+            last_newline = post_text.rfind("\n", 0, cutoff)
+            best_break = max(last_space, last_newline)
+            if best_break > cutoff * 0.8:
+                post_text = post_text[:best_break].rstrip() + "..."
+            else:
+                post_text = post_text[:cutoff].rstrip() + "..."
 
         run_id = gen_response.run_id or request.run_id or f"run_{secrets.token_hex(4)}"
 
@@ -443,6 +456,84 @@ class LinkedInService:
     # Internal Helpers (Private)
     # -------------------------------------------------------------------------
 
+    @classmethod
+    def _format_linkedin_commentary(cls, text: str, max_chars: int = 3000) -> Tuple[str, Optional[str]]:
+        """
+        Formats and escapes text for LinkedIn Posts API (Little Text Format),
+        preventing silent post truncation caused by unescaped markup delimiters.
+
+        Official reserved characters per LinkedIn Posts API (little format):
+          | { } @ [ ] ( ) < > # \\ * _ ~
+
+        Rules:
+        1. Valid hashtags (e.g. #PromptEngineering, #AIProduction) are preserved as HashtagElements.
+           Stray hashes (e.g. '# ', '## Header', 'C#') are escaped as \\#.
+        2. Other reserved characters (|, {, }, @, [, ], (, ), <, >, *, _, ~, \\) are escaped
+           with a backslash unless already escaped.
+        3. Enforces LinkedIn's 3,000-character limit cleanly without breaking words or escape sequences.
+        """
+        if not text:
+            return "", None
+
+        # Normalize line breaks to unix \n
+        normalized = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+        warning: Optional[str] = None
+
+        # Pre-escape length check at clean boundary if excessively long
+        if len(normalized) > max_chars:
+            warning = (
+                f"Content length ({len(normalized)} chars) exceeded LinkedIn's {max_chars}-character limit; "
+                "it was cleanly truncated while preserving the post body."
+            )
+            cutoff = max_chars - 3
+            last_space = normalized.rfind(" ", 0, cutoff)
+            last_newline = normalized.rfind("\n", 0, cutoff)
+            best_break = max(last_space, last_newline)
+            if best_break > cutoff * 0.8:
+                normalized = normalized[:best_break].rstrip() + "..."
+            else:
+                normalized = normalized[:cutoff].rstrip() + "..."
+
+        # Protect valid hashtags using an alphanumeric token without reserved characters
+        hashtags: List[str] = []
+        def save_hashtag(m: re.Match) -> str:
+            prefix = m.group(1)
+            tag = m.group(2)
+            hashtags.append(tag)
+            return f"{prefix}LINKEDINHTTOKEN{len(hashtags)-1}ENDHT"
+
+        text_with_tokens = re.sub(r'(^|[\s\n])(#[a-zA-Z0-9_]+)', save_hashtag, normalized)
+
+        # Escape stray '#' that are not hashtags (e.g. '## heading', '# ', 'C#')
+        text_with_tokens = re.sub(r'(?<!\\)#', r'\#', text_with_tokens)
+
+        # Escape unescaped backslashes that are not already part of a valid escape sequence
+        text_with_tokens = re.sub(r'\\(?![|{}@\[\]()<>#\\*_~])', r'\\\\', text_with_tokens)
+
+        # Escape unescaped reserved Little Text characters: | { } @ [ ] ( ) < > * _ ~
+        reserved_pattern = r'(?<!\\)([|{}@\[\]()<>*_~])'
+        text_with_tokens = re.sub(reserved_pattern, r'\\\1', text_with_tokens)
+
+        # Restore valid hashtags
+        for idx, ht in enumerate(hashtags):
+            text_with_tokens = text_with_tokens.replace(f"LINKEDINHTTOKEN{idx}ENDHT", ht)
+
+        # Post-escape length check: escaping adds backslashes, so ensure strictly within max_chars
+        if len(text_with_tokens) > max_chars:
+            warning = (
+                f"Formatted content length ({len(text_with_tokens)} chars) exceeded LinkedIn's {max_chars}-character limit; "
+                "it was cleanly truncated to fit LinkedIn's API limits."
+            )
+            cutoff = max_chars - 3
+            trimmed = text_with_tokens[:cutoff]
+            # Avoid leaving a dangling trailing escape backslash
+            trailing_slashes = len(trimmed) - len(trimmed.rstrip('\\'))
+            if trailing_slashes % 2 == 1:
+                trimmed = trimmed[:-1]
+            text_with_tokens = trimmed.rstrip() + "..."
+
+        return text_with_tokens, warning
+
     @staticmethod
     def _extract_linkedin_post_text(generated_content: Any) -> str:
         """
@@ -467,7 +558,7 @@ class LinkedInService:
 
         # Fallback to dictionary itself if 'linkedin' key isn't top-level
         if linkedin_data is None:
-            if "content" in generated_content or "text" in generated_content:
+            if any(k in generated_content for k in ("content", "text", "body", "post")):
                 linkedin_data = generated_content
             else:
                 return ""
@@ -478,18 +569,34 @@ class LinkedInService:
         if not isinstance(linkedin_data, dict):
             return str(linkedin_data).strip()
 
-        body = (
+        # Safely extract body text from string, list, or dict structures
+        raw_body = (
             linkedin_data.get("content")
+            or linkedin_data.get("body")
             or linkedin_data.get("text")
             or linkedin_data.get("post")
+            or linkedin_data.get("description")
+            or linkedin_data.get("message")
             or ""
-        ).strip()
-        title = (linkedin_data.get("title") or "").strip()
-        cta = (
+        )
+        if isinstance(raw_body, list):
+            body = "\n\n".join(str(item).strip() for item in raw_body if item).strip()
+        elif isinstance(raw_body, dict):
+            body = (raw_body.get("text") or raw_body.get("content") or raw_body.get("body") or str(raw_body)).strip()
+        else:
+            body = str(raw_body).strip()
+
+        raw_title = linkedin_data.get("title") or linkedin_data.get("headline") or ""
+        title = str(raw_title).strip()
+
+        raw_cta = (
             linkedin_data.get("call_to_action")
             or linkedin_data.get("cta")
+            or linkedin_data.get("closing")
             or ""
-        ).strip()
+        )
+        cta = str(raw_cta).strip()
+
         hashtags = linkedin_data.get("hashtags") or []
 
         # Format hashtags

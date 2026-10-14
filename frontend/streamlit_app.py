@@ -1,191 +1,147 @@
+import os
+import sys
+from pathlib import Path
 import streamlit as st
-from api_client import APIClient
 
+# Ensure frontend directory is in python path for robust module imports
+frontend_dir = Path(__file__).resolve().parent
+if str(frontend_dir) not in sys.path:
+    sys.path.insert(0, str(frontend_dir))
+
+from api_client import APIClient
+from styles import apply_global_styles
+from components.header import render_app_branding
+from pages.dashboard import render_dashboard_page
+from pages.content_studio import render_content_studio_page
+from pages.knowledge_base import render_knowledge_base_page
+from pages.publishing_history import render_publishing_history_page
+from pages.campaigns import render_campaigns_page
+from pages.analytics import render_analytics_page
+from pages.settings import render_settings_page
+
+
+# -----------------------------------------------------------------------------
+# Streamlit Application Page Configuration
+# -----------------------------------------------------------------------------
 st.set_page_config(
-    page_title="AI Personal Branding Platform",
+    page_title="AI Personal Branding & Content Intelligence Platform",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-# Custom CSS for rich aesthetics
-st.markdown("""
-    <style>
-    .main-header {
-        font-size: 2.2rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.5rem;
-    }
-    .sub-header {
-        color: #6b7280;
-        font-size: 1.05rem;
-        margin-bottom: 2rem;
-    }
-    .card {
-        border-radius: 12px;
-        padding: 1.25rem;
-        background-color: #1f2937;
-        color: #f3f4f6;
-        border: 1px solid #374151;
-        margin-bottom: 1rem;
-    }
-    .status-badge-healthy {
-        background-color: #065f46;
-        color: #34d399;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-    .status-badge-degraded {
-        background-color: #92400e;
-        color: #fbbf24;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# Apply unified styling (indigo/violet accents, dark mode cards, badges)
+apply_global_styles()
 
-# Sidebar settings
-st.sidebar.title("⚙️ Configuration")
-backend_url = st.sidebar.text_input("FastAPI Base URL", value="http://127.0.0.1:8000")
-client = APIClient(base_url=backend_url)
+# -----------------------------------------------------------------------------
+# Shared State & API Client Initialization
+# -----------------------------------------------------------------------------
+if "fastapi_base_url" not in st.session_state:
+    st.session_state["fastapi_base_url"] = os.getenv("FASTAPI_BASE_URL", "http://127.0.0.1:8000")
 
-st.sidebar.divider()
-st.sidebar.markdown("**Phase 0 Foundation**")
-st.sidebar.caption("Streamlit Frontend → FastAPI Backend → MongoDB")
+client = APIClient(base_url=st.session_state["fastapi_base_url"])
 
-# Main Header
-st.markdown('<div class="main-header">AI Personal Branding & Content Intelligence Platform</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Phase 0 Architectural Foundation & Verification Control Panel</div>', unsafe_allow_html=True)
+# -----------------------------------------------------------------------------
+# Sidebar Configuration & Telemetry Status
+# -----------------------------------------------------------------------------
+with st.sidebar:
+    st.markdown(
+        """
+        <div style="padding-bottom: 0.5rem;">
+            <div style="font-weight: 800; font-size: 1.15rem; background: linear-gradient(135deg, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                ⚡ Content Intelligence
+            </div>
+            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">
+                Personal Branding Engine
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-# Tabs
-tab1, tab2, tab3 = st.tabs(["📊 System Health & Status", "⚡ Content Generation (Stub)", "📐 Target Architecture"])
-
-with tab1:
-    st.subheader("System & Database Health Monitor")
-    st.caption("Verifies end-to-end communication from Streamlit → FastAPI → MongoDB.")
-    
-    if st.button("🔄 Refresh System Status", type="primary"):
-        st.rerun()
-        
-    with st.spinner("Checking backend and MongoDB health..."):
-        health_resp = client.check_health()
-        
-    col1, col2, col3 = st.columns(3)
-    
-    if health_resp["success"]:
-        data = health_resp["data"].get("data", {})
-        sys_status = data.get("status", "unknown")
-        db_info = data.get("database", {})
-        
-        with col1:
-            st.metric("FastAPI Gateway", f"HTTP {health_resp['http_status']} OK", "Connected")
-        with col2:
-            st.metric("Overall System Status", sys_status.upper(), f"Env: {data.get('environment', 'dev')}")
-        with col3:
-            db_status_str = "CONNECTED" if db_info.get("connected") else "DISCONNECTED"
-            st.metric("MongoDB Database", db_status_str, db_info.get("database_name", "N/A"))
-            
-        if not db_info.get("connected"):
-            st.warning(f"⚠️ **MongoDB Connection Degraded**: {db_info.get('error')}")
-            st.info("Ensure MongoDB is running locally at `mongodb://localhost:27017` or configured via `.env`.")
-        else:
-            st.success("✅ **System fully operational**: FastAPI and MongoDB connected.")
-            
-        with st.expander("🔍 View Raw JSON Response"):
-            st.json(health_resp["data"])
-    else:
-        with col1:
-            st.metric("FastAPI Gateway", f"HTTP {health_resp['http_status']}", "Offline / Unreachable")
-        with col2:
-            st.metric("System Status", "UNHEALTHY", "Offline")
-        with col3:
-            st.metric("MongoDB", "UNKNOWN", "N/A")
-            
-        st.error(f"❌ **Connection Error**: {health_resp.get('error')}")
-        st.info("Make sure the FastAPI backend is running via `uvicorn app.main:app --reload`.")
-
-with tab2:
-    st.subheader("Content Generation Workflow (Phase 0 Stub)")
-    st.caption("Submits a test request to `POST /api/v1/content/generate` to verify schema validation and routing.")
-    
-    with st.form("content_stub_form"):
-        topic = st.text_input("Content Topic", value="Model Context Protocol (MCP) Architecture", help="Enter topic or prompt")
-        
-        col_a, col_b = st.columns(2)
-        with col_a:
-            audience = st.selectbox("Target Audience", ["AI engineers", "Tech Founders", "Software Engineers", "General Tech"])
-            tone = st.selectbox("Tone", ["technical", "educational", "conversational", "thought-provoking"])
-        with col_b:
-            campaign_id = st.text_input("Campaign ID (Optional)", value="cmp_12345")
-            source_url = st.text_input("Source URL (Optional)", value="https://example.com/mcp-spec")
-            
-        platforms = st.multiselect(
-            "Target Platforms",
-            options=["linkedin", "twitter", "instagram", "blog", "newsletter"],
-            default=["linkedin", "twitter"]
+    with st.expander("⚙️ Gateway Connection", expanded=False):
+        current_url = st.text_input(
+            "Base URL",
+            value=st.session_state["fastapi_base_url"],
+            help="FastAPI server endpoint",
+            key="sidebar_gateway_input",
         )
-        
-        submitted = st.form_submit_button("🚀 Submit Stub Request", type="primary")
-        
-    if submitted:
-        if not topic:
-            st.warning("Please specify a topic.")
-        elif not platforms:
-            st.warning("Please select at least one target platform.")
-        else:
-            with st.spinner("Submitting stub request to FastAPI..."):
-                gen_resp = client.trigger_content_generation_stub(
-                    topic=topic,
-                    platforms=platforms,
-                    audience=audience,
-                    tone=tone,
-                    campaign_id=campaign_id if campaign_id else None,
-                    source_url=source_url if source_url else None
-                )
-                
-            if gen_resp["success"]:
-                resp_data = gen_resp["data"].get("data", {})
-                st.success(f"✅ **Request Acknowledged!** `run_id`: `{resp_data.get('run_id')}`")
-                
-                col_r1, col_r2 = st.columns(2)
-                with col_r1:
-                    st.json({
-                        "run_id": resp_data.get("run_id"),
-                        "status": resp_data.get("status"),
-                        "message": resp_data.get("message")
-                    })
-                with col_r2:
-                    st.json({
-                        "requested_topic": resp_data.get("requested_topic"),
-                        "platforms": resp_data.get("platforms")
-                    })
-            else:
-                st.error(f"❌ Submission Failed: {gen_resp.get('error')}")
+        if current_url.strip() != st.session_state["fastapi_base_url"]:
+            st.session_state["fastapi_base_url"] = current_url.strip()
+            client.base_url = current_url.strip()
+            st.rerun()
 
-with tab3:
-    st.subheader("Phase 0 Architecture & Modular Growth Path")
-    st.markdown("""
-    ### Target Architecture Layout
-    ```
-    Streamlit Frontend (port 8501)
-            │  HTTP / JSON (httpx)
-            ▼
-    FastAPI Gateway (port 8000) [/api/v1]
-            │
-            ├─► Route → HealthService → MongoDB Database
-            │
-            └─► Future Modular Plugs:
-                 ├── app/agents/      (LangGraph Supervisor, Research, Strategy, Content, Critic, Publisher)
-                 ├── app/workflows/   (LangGraph State Graph Workflows)
-                 ├── app/rag/         (ChromaDB + Hybrid BM25/Dense Retriever)
-                 ├── app/mcp/         (Model Context Protocol Clients & Tools)
-                 └── app/workers/     (Redis + Celery Background Task Workers)
-    ```
-    """)
+    st.divider()
+
+# -----------------------------------------------------------------------------
+# Multipage Navigation Setup (Native st.navigation & st.Page)
+# -----------------------------------------------------------------------------
+pages = {
+    "WORKSPACE": [
+        st.Page(
+            lambda: render_dashboard_page(client),
+            title="Dashboard",
+            icon=":material/dashboard:",
+            default=True,
+            url_path="dashboard",
+        ),
+        st.Page(
+            lambda: render_content_studio_page(client),
+            title="Content Studio",
+            icon=":material/edit_document:",
+            url_path="content-studio",
+        ),
+        st.Page(
+            lambda: render_knowledge_base_page(client),
+            title="Knowledge Base",
+            icon=":material/menu_book:",
+            url_path="knowledge-base",
+        ),
+    ],
+    "MANAGEMENT": [
+        st.Page(
+            lambda: render_publishing_history_page(client),
+            title="Publishing History",
+            icon=":material/history:",
+            url_path="publishing-history",
+        ),
+        st.Page(
+            lambda: render_campaigns_page(client),
+            title="Campaigns",
+            icon=":material/campaign:",
+            url_path="campaigns",
+        ),
+        st.Page(
+            lambda: render_analytics_page(client),
+            title="Analytics",
+            icon=":material/analytics:",
+            url_path="analytics",
+        ),
+    ],
+    "CONFIGURATION": [
+        st.Page(
+            lambda: render_settings_page(client),
+            title="Settings",
+            icon=":material/settings:",
+            url_path="settings",
+        ),
+    ],
+}
+
+nav = st.navigation(pages)
+
+# -----------------------------------------------------------------------------
+# Main Application Shell
+# -----------------------------------------------------------------------------
+# Render top branding banner
+render_app_branding()
+st.markdown("<hr style='margin: 0.5rem 0 1.5rem 0; border: none; border-top: 1px solid rgba(148, 163, 184, 0.15);'>", unsafe_allow_html=True)
+
+# Execute current page
+nav.run()
+
+# Sidebar footer
+with st.sidebar:
+    st.divider()
+    st.caption("🚀 **Phase 1B-3 Active**")
+    st.caption("LangGraph · ChromaDB · Search MCP · LinkedIn")

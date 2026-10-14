@@ -1,0 +1,1 @@
+"""Frontend multi-page modules."""
