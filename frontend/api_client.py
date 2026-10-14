@@ -270,6 +270,68 @@ class APIClient:
     # RAG Knowledge Subsystem
     # -------------------------------------------------------------------------
 
+    def ingest_document(
+        self,
+        filename: str,
+        file_bytes: bytes,
+        timeout: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """
+        Upload and ingest a PDF document via POST /api/v1/knowledge/ingest.
+
+        Args:
+            filename: Original name of the PDF file.
+            file_bytes: Raw binary content of the PDF file.
+            timeout: Optional request timeout in seconds (defaults to max(self.timeout, 60.0)).
+
+        Returns:
+            Dict containing http_status, success flag, response data, and optional error string.
+        """
+        url = f"{self.base_url}/api/v1/knowledge/ingest"
+        req_timeout = timeout if timeout is not None else max(self.timeout, 60.0)
+        files = {
+            "file": (filename, file_bytes, "application/pdf"),
+        }
+        try:
+            with httpx.Client(timeout=req_timeout) as client:
+                response = client.post(url, files=files)
+                try:
+                    data = response.json()
+                except Exception:
+                    data = {"raw_text": response.text}
+
+                result: Dict[str, Any] = {
+                    "http_status": response.status_code,
+                    "success": response.is_success,
+                    "data": data,
+                }
+
+                if not response.is_success:
+                    detail = None
+                    if isinstance(data, dict):
+                        detail = data.get("detail") or data.get("message")
+                    result["error"] = detail or f"HTTP {response.status_code}: {response.text}"
+
+                return result
+        except httpx.ConnectError:
+            return {
+                "http_status": 503,
+                "success": False,
+                "error": f"Unable to connect to FastAPI backend at {self.base_url}. Is FastAPI running?",
+            }
+        except httpx.TimeoutException:
+            return {
+                "http_status": 504,
+                "success": False,
+                "error": f"Request to {url} timed out after {req_timeout}s. Ingestion took longer than expected.",
+            }
+        except Exception as e:
+            return {
+                "http_status": 500,
+                "success": False,
+                "error": str(e),
+            }
+
     def search_knowledge_base(
         self,
         query: str,
@@ -312,5 +374,6 @@ class APIClient:
                 "success": False,
                 "error": str(e),
             }
+
 
 
