@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -65,6 +66,25 @@ class Settings(BaseSettings):
     MCP_SERVER_HOST: str = "127.0.0.1"
     MCP_SERVER_PORT: int = 8001
     MCP_SERVER_NAME: str = "search-mcp-server"
+
+    # LinkedIn OAuth & Publishing Configuration (Canonical Redirect URI: /api/v1/linkedin/callback)
+    LINKEDIN_CLIENT_ID: str | None = None
+    LINKEDIN_CLIENT_SECRET: str | None = None
+    LINKEDIN_REDIRECT_URI: str = "http://127.0.0.1:8000/api/v1/linkedin/callback"
+    LINKEDIN_SCOPE: str = "openid profile w_member_social"
+    LINKEDIN_API_VERSION: str = "202502"
+    LINKEDIN_OAUTH_STATE_TTL_SECONDS: int = 600
+
+    @field_validator("LINKEDIN_REDIRECT_URI", mode="after")
+    @classmethod
+    def normalize_linkedin_redirect_uri(cls, v: str) -> str:
+        """
+        Normalizes any stale or legacy redirect URI paths (such as /api/v1/publishing/linkedin/callback)
+        to the canonical registered FastAPI callback route /api/v1/linkedin/callback.
+        """
+        if v and "/api/v1/publishing/linkedin/callback" in v:
+            return v.replace("/api/v1/publishing/linkedin/callback", "/api/v1/linkedin/callback")
+        return v
 
 @lru_cache
 def get_settings() -> Settings:

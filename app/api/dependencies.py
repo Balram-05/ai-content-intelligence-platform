@@ -3,6 +3,7 @@ from app.core.config import Settings, get_settings
 from app.core.database import Database, db_instance
 from app.services.health_service import HealthService
 from app.services.content_service import ContentService
+from app.services.linkedin_service import LinkedInService
 from app.rag.ingestion import RAGIngestionService
 from app.rag.retrieval import RAGRetrievalService
 
@@ -28,6 +29,14 @@ def get_content_service(
     return ContentService(db=db, settings=settings)
 
 
+def get_linkedin_service(
+    db: Database = Depends(get_db),
+    settings: Settings = Depends(get_settings)
+) -> LinkedInService:
+    """FastAPI Dependency injecting LinkedInService."""
+    return LinkedInService(db=db, settings=settings)
+
+
 def get_rag_ingestion_service() -> RAGIngestionService:
     """FastAPI Dependency injecting RAGIngestionService."""
     return RAGIngestionService()
@@ -36,5 +45,6 @@ def get_rag_ingestion_service() -> RAGIngestionService:
 def get_rag_retrieval_service() -> RAGRetrievalService:
     """FastAPI Dependency injecting RAGRetrievalService."""
     return RAGRetrievalService()
+
 
 
