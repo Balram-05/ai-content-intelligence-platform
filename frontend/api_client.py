@@ -6,7 +6,7 @@ import httpx
 class APIClient:
     """Streamlit HTTP Client communicating with FastAPI backend via httpx."""
 
-    def __init__(self, base_url: Optional[str] = None, timeout: float = 5.0):
+    def __init__(self, base_url: Optional[str] = None, timeout: float = 30.0):
         self.base_url = (base_url or os.getenv("FASTAPI_BASE_URL", "http://127.0.0.1:8000")).rstrip("/")
         self.timeout = timeout
 
