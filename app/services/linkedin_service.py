@@ -308,6 +308,7 @@ class LinkedInService:
             "author_urn": member_urn,
             "text": request.text,
             "run_id": request.run_id,
+            "topic": request.topic,
             "platform": "linkedin",
             "status": "published",
             "published_at": datetime.now(timezone.utc),
@@ -380,6 +381,7 @@ class LinkedInService:
             audience=request.audience,
             tone=request.tone,
             platforms=["linkedin"],
+            run_id=request.run_id,
             campaign_id=request.run_id,
         )
 
@@ -420,7 +422,8 @@ class LinkedInService:
         # 4. Dispatch to existing publish_text_post
         publish_req = LinkedInPublishRequest(
             text=post_text,
-            run_id=run_id
+            run_id=run_id,
+            topic=request.topic,
         )
         pub_result = await self.publish_text_post(publish_req)
 

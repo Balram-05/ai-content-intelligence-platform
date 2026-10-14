@@ -28,7 +28,7 @@ class ContentService:
         4. Persists execution record to MongoDB
         5. Returns ContentGenerationResponse
         """
-        run_id = f"run_{uuid.uuid4().hex[:8]}"
+        run_id = request.run_id or f"run_{uuid.uuid4().hex[:8]}"
         logger.info(
             f"[CONTENT_SERVICE] Initializing generation workflow run_id='{run_id}' for topic='{request.topic}' "
             f"on platforms={request.platforms}"

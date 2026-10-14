@@ -7,6 +7,7 @@ class ContentGenerationRequest(BaseModel):
     Schema for content generation requests (PRD Section 5.5).
     """
     topic: str = Field(..., min_length=1, description="Target topic for content generation")
+    run_id: Optional[str] = Field(default=None, description="Optional custom workflow run ID")
     campaign_id: Optional[str] = Field(default=None, description="Optional associated campaign ID")
     source_url: Optional[str] = Field(default=None, description="Optional source URL for context")
     audience: Optional[str] = Field(default="AI engineers", description="Target audience demographic")

@@ -30,6 +30,7 @@ class LinkedInPublishRequest(BaseModel):
     """Request payload to publish a text post to the connected personal LinkedIn profile."""
     text: str = Field(..., min_length=1, max_length=3000, description="Post commentary body text (1-3000 chars)")
     run_id: Optional[str] = Field(default=None, description="Optional workflow run ID linking generated content to post")
+    topic: Optional[str] = Field(default=None, description="Optional topic for tracking generated content")
 
     @field_validator("text")
     @classmethod
@@ -63,6 +64,28 @@ class LinkedInPublishFromTopicRequest(BaseModel):
         if not v or not v.strip():
             raise ValueError("Topic cannot be empty or contain only whitespace.")
         return v.strip()
+
+    @field_validator("tone", mode="before")
+    @classmethod
+    def default_tone_if_none(cls, v: Optional[str]) -> str:
+        if v is None or not str(v).strip():
+            return "professional"
+        return str(v).strip()
+
+    @field_validator("audience", mode="before")
+    @classmethod
+    def default_audience_if_none(cls, v: Optional[str]) -> str:
+        if v is None or not str(v).strip():
+            return "software developers"
+        return str(v).strip()
+
+    @field_validator("run_id", mode="before")
+    @classmethod
+    def clean_run_id(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        v_str = str(v).strip()
+        return v_str if v_str else None
 
 
 class LinkedInTopicPublishResponse(BaseModel):
